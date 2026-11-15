@@ -4,11 +4,19 @@ Uma barra de vida para suas sessões de IA. Acompanhe quotas e recargas de Claud
 
 ## Exemplos
 
-As imagens mostram dados simulados, incluindo a economia de exemplo.
+As duas imagens a seguir mostram dados simulados, incluindo a economia de exemplo.
 
 ![HUD com HP, MP e economia de exemplo](mana-hud-demo.png)
 
 ![HUD sugerindo instalação de ferramentas opcionais](mana-hud-instalacao.png)
+
+### Painel original no Claude
+
+![Painel HUD·IA no Claude com dados reais de uso](claude-hud.png)
+
+Esta captura do painel original contém dados reais de exemplo: planos, percentuais de uso, tempos de reset, estatísticas do RTK e uma mensagem de erro de autenticação do Gemini. Esses dados ficarão visíveis a todos se o repositório for público.
+
+O painel original, incluído em `painel-claude.zip`, registra um callback `session.start` que tenta abri-lo quando uma sessão começa, desde que o plugin esteja instalado e o host ofereça a API de painel correspondente. Se o painel não puder ser posicionado, o código informa como abri-lo com `/hud-ia`. É um hook de início de sessão, não um `PreToolUse`; seu funcionamento depende do host e não foi verificado nesta revisão em uma nova sessão do Claude CLI. O painel da imagem é diferente da janela portátil Mana HUD.
 
 ## HP, MP e recarga
 
@@ -45,7 +53,7 @@ No Codex CLI, use `~/.codex/hooks.json` e aprove o hook em `/hooks` quando solic
 
 - `mana_hud.py`: HUD portátil e inicializador de sessão.
 - `SKILL.md`: instruções para o agente consultar e explicar o uso.
-- `codex-hud.ps1` e `session-start.ps1`: versão Windows original, mantida como referência; contém caminhos específicos do ambiente original.
+- `codex-hud.ps1` e `session-start.ps1`: versão Windows original, mantida como referência; requer ai-usagebar no caminho esperado pelo script.
 - `painel-claude.zip`: painel lateral original experimental para um host Claude compatível, separado da janela portátil.
 
 ## Privacidade e limites

@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $stateDir = Join-Path $env:LOCALAPPDATA 'hud-ia'
 $baselinePath = Join-Path $stateDir 'rtk-session-baseline.json'
 New-Item -ItemType Directory -Path $stateDir -Force | Out-Null
@@ -22,5 +22,6 @@ try {
 }
 
 if (-not (Get-Process powershell -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -like 'HUD*Codex' })) {
-    Start-Process powershell.exe -WindowStyle Hidden -ArgumentList '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File C:\Users\USERX\hud-ia\codex-hud.ps1'
+    $hudPath = Join-Path $PSScriptRoot 'codex-hud.ps1'
+    Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile', '-WindowStyle', 'Hidden', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $hudPath + '"'))
 }
