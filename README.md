@@ -1,25 +1,44 @@
 # Mana HUD 🎮
 
-Painel gamer para acompanhar recursos de IA. Criado a partir da HUD·IA de Thulio Buarque e alimentado pelo projeto independente [ai-usagebar](https://github.com/akitaonrails/ai-usagebar).
+Uma barra de vida para suas sessões de IA. Acompanhe quotas e recargas de Claude, Codex e Gemini/Antigravity em uma janela para Windows e macOS. Interface pessoal de Thulio Buarque sobre o [ai-usagebar](https://github.com/akitaonrails/ai-usagebar), projeto independente de seus autores.
 
-## Como funciona
+## HP, MP e recarga
 
-HP, MP e SP representam as janelas de limite recebidas do provedor, em ordem. A barra mostra o percentual restante. O contador de reset depende do horário informado pelo provedor; zerar o relógio não garante atualização imediata.
+- **HP, MP e SP** representam as métricas de cada provedor na ordem recebida. A porcentagem é a quota restante, não uma medida de tokens exatos.
+- **Reset** mostra o tempo até o horário informado pelo provedor. A quota efetiva depende da próxima resposta do serviço; o HUD não altera limites.
+- **Refresh** consulta o ai-usagebar ao abrir e a cada 3 minutos. O relógio é redesenhado a cada segundo sem nova consulta. Use **Atualizar agora** para consultar imediatamente.
 
-O painel Windows para Codex consulta os dados a cada 3 minutos e atualiza o relógio a cada segundo. O painel experimental do Claude consulta a cada 5 minutos; a tecla `r` força nova consulta. A animação não faz consultas.
+## Preparação
 
-## Começar
+1. Instale e configure o [ai-usagebar](https://github.com/akitaonrails/ai-usagebar) e confira `ai-usagebar usage --json` no terminal. Configure as contas pelo próprio programa. A saída pode ser privada.
+2. Instale Python 3 com Tkinter. No macOS, confirme `python3 -m tkinter`; no Windows, `python -m tkinter`. Se não abrir uma janela de teste, instale uma distribuição Python com Tk.
+3. Clone ou baixe este projeto e execute dentro da pasta:
 
-Instale e configure o [ai-usagebar](https://github.com/akitaonrails/ai-usagebar) e confirme que `ai-usagebar usage --json` funciona. Nunca salve credenciais neste repositório.
+```sh
+python3 mana_hud.py --window
+```
 
-No Windows, o arquivo `codex-hud.ps1` abre uma janela separada. O arquivo original pressupõe a instalação do ai-usagebar em `%LOCALAPPDATA%\Programs\ai-usagebar`. `session-start.ps1` captura a base de economia do RTK e abre a janela; seu caminho está fixo no computador de origem e precisa de ajuste. A integração por hook SessionStart depende de configuração e aprovação no Codex.
+No Windows, use `python mana_hud.py --window`. Feche a janela para encerrar. Sem `--window`, o comando inicia a HUD em segundo plano e termina imediatamente, para uso em hooks. Uma porta local evita janelas duplicadas.
 
-O painel de Claude no arquivo `painel-claude.zip` (extraia na pasta do projeto) usa APIs experimentais de interface, abre em `session.start`, aceita `/hud-ia`, teclas 1 a 7 e `r`. Requer um host compatível. O código possui configurações específicas do ambiente original.
+## Abrir em novas sessões
 
-## Limitações
+Adicione um hook `SessionStart` às configurações do agente, **preservando os hooks existentes**. Use o caminho absoluto para o projeto e para o Python, se necessário. Exemplo de entrada macOS para incluir dentro de `hooks.SessionStart`:
 
-O painel Codex usa Windows Forms e não funciona no macOS. O painel Claude não foi validado no Mac e contém comandos específicos de Windows. A ativação automática em sessões novas depende da configuração do host e ainda precisa de teste real. O ai-usagebar tem suporte próprio ao macOS, mas isso não implica suporte desta HUD.
+```json
+{
+  "hooks": [{"type": "command", "command": "python3 /CAMINHO/para/mana-hud/mana_hud.py"}]
+}
+```
 
-RTK é opcional. A economia apresentada usa totais locais e uma base compartilhada entre sessões, não uma medição isolada de cada conversa. A presença de uma skill não prova que ela esteja ativa.
+No Codex CLI, use `~/.codex/hooks.json` e aprove o hook em `/hooks` quando solicitado. No Claude Code, use `~/.claude/settings.json`. No Windows, adapte o comando ao shell do agente, por exemplo `python \"C:\\caminho\\mana-hud\\mana_hud.py\"` no JSON. Revise a configuração e reinicie a sessão. Ambiente gráfico e PATH podem diferir do terminal; use caminhos absolutos quando necessário. Os hooks podem exigir confiança ou aprovação no host. Referências: [Codex hooks](https://developers.openai.com/learn/codex/hooks) e [Claude Code hooks](https://code.claude.com/docs/en/hooks).
 
-O ai-usagebar é uma dependência independente e mantém sua própria licença e autoria.
+## Arquivos
+
+- `mana_hud.py`: HUD portátil e inicializador de sessão.
+- `SKILL.md`: instruções para o agente consultar e explicar o uso.
+- `codex-hud.ps1` e `session-start.ps1`: versão Windows original, mantida como referência; contém caminhos específicos do ambiente original.
+- `painel-claude.zip`: painel lateral original experimental para um host Claude compatível, separado da janela portátil.
+
+## Privacidade e limites
+
+O Mana HUD executa o ai-usagebar localmente; autenticação e coleta pertencem à ferramenta e aos provedores. Não grave tokens nem publique a saída das consultas. A interface mostra mensagem genérica quando uma consulta falha. A HUD portátil não instala nem modifica hooks automaticamente. Windows foi testado neste ambiente; macOS e execução de hooks em uma sessão real ainda precisam de validação. A janela usa Tk e requer uma sessão gráfica.
