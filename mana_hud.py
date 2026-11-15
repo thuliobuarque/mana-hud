@@ -4,6 +4,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -19,6 +20,15 @@ def remaining(value):
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return None
     return max(0, min(100, round(100 - value)))
+
+
+def metric_order(metric):
+    label = str(metric.get("label", "")).lower()
+    if re.search(r"session|sessão|\b5\s*h\b", label):
+        return 0
+    if re.search(r"weekly|seman|\b7\s*d\b", label):
+        return 1
+    return 2
 
 
 def countdown(value, now=None):
@@ -50,6 +60,18 @@ def fetch():
     return [entry for entry in data["entries"] if isinstance(entry, dict) and entry.get("id") in PROVIDERS]
 
 
+def rtk_totals():
+    exe = shutil.which("rtk")
+    if not exe:
+        return None
+    try:
+        result = subprocess.run([exe, "gain", "--format", "json"], capture_output=True, text=True, timeout=20, check=True)
+        summary = json.loads(result.stdout)["summary"]
+        return int(summary["total_saved"]), int(summary["total_input"])
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+        return None
+
+
 def run_gui():
     import tkinter as tk
     from tkinter import ttk
@@ -64,9 +86,13 @@ def run_gui():
         return
     root = tk.Tk()
     root.title("Mana HUD — Player Status")
-    root.geometry("440x560")
+    root.geometry("440x800")
     root.configure(bg="#0d1626")
     root.attributes("-topmost", True)
+    style = ttk.Style(root)
+    style.theme_use("clam")
+    for name, color in (("HP", "#ef5364"), ("MP", "#459dff"), ("SP", "#b78bf3")):
+        style.configure(name + ".Horizontal.TProgressbar", troughcolor="#25334a", background=color, bordercolor="#25334a", lightcolor=color, darkcolor=color)
     tk.Label(root, text="MANA HUD  /  PLAYER STATUS", fg="#5be0ff", bg="#0d1626", font=("Arial", 14, "bold")).pack(pady=(14, 4))
     status = tk.Label(root, text="Conectando...", fg="#9aadc4", bg="#0d1626")
     status.pack()
@@ -75,9 +101,10 @@ def run_gui():
     clock_labels = []
     busy = False
     last_refresh = None
+    rtk_baseline = None
 
-    def display(entries, error):
-        nonlocal busy, last_refresh
+    def display(entries, error, totals):
+        nonlocal busy, last_refresh, rtk_baseline
         busy = False
         last_refresh = time.monotonic()
         if error:
@@ -95,18 +122,42 @@ def run_gui():
             tk.Label(card, text=str(entry.get("display_name") or entry.get("id")), fg="#5be0ff", bg="#162338", font=("Arial", 11, "bold")).pack(anchor="w")
             if entry.get("error"):
                 tk.Label(card, text="Dados indisponíveis; verifique a conta.", fg="#ff7180", bg="#162338").pack(anchor="w")
-            for index, metric in enumerate(entry.get("metrics") or []):
-                if not isinstance(metric, dict):
-                    continue
+            metrics = sorted((m for m in (entry.get("metrics") or []) if isinstance(m, dict)), key=metric_order)
+            for index, metric in enumerate(metrics):
                 value = remaining(metric.get("percent"))
                 label = str(metric.get("label") or "Limite")
                 tag = ("HP", "MP", "SP")[min(index, 2)]
                 tk.Label(card, text=f"{tag} · {label}  —  {str(value) + '%' if value is not None else 'indisponível'} livre", fg="#e1ebfa", bg="#162338").pack(anchor="w")
                 if value is not None:
-                    ttk.Progressbar(card, maximum=100, value=value).pack(fill="x")
+                    ttk.Progressbar(card, maximum=100, value=value, style=tag + ".Horizontal.TProgressbar").pack(fill="x")
                 timer = tk.Label(card, fg="#9aadc4", bg="#162338")
                 timer.pack(anchor="w")
                 clock_labels.append((timer, metric.get("reset_at")))
+        skills = tk.Frame(container, bg="#162338", padx=10, pady=8)
+        skills.pack(fill="x", pady=4)
+        tk.Label(skills, text="ECONOMIA DE TOKENS", fg="#5be0ff", bg="#162338", font=("Arial", 10, "bold")).pack(anchor="w")
+        home = os.path.expanduser("~")
+        found = []
+        missing = []
+        for name in ("caveman", "ponytail"):
+            if any(os.path.isfile(os.path.join(home, root, "skills", name, "SKILL.md")) for root in (".agents", ".codex")):
+                found.append(name.capitalize())
+            else:
+                missing.append(name.capitalize())
+        if shutil.which("rtk"):
+            found.append("RTK")
+        else:
+            missing.append("RTK")
+        tk.Label(skills, text=("Encontrados: " + " · ".join(found)) if found else "Nenhuma ferramenta encontrada", fg="#e1ebfa", bg="#162338").pack(anchor="w")
+        if missing:
+            tk.Label(skills, text="Sugestão: instale " + " · ".join(missing), fg="#ffca77", bg="#162338", wraplength=360, justify="left").pack(anchor="w")
+        if totals is not None:
+            if rtk_baseline is None:
+                rtk_baseline = totals
+            saved = max(0, totals[0] - rtk_baseline[0])
+            tk.Label(skills, text=f"RTK desde a abertura: {saved:,} tokens poupados".replace(",", "."), fg="#77dfae", bg="#162338").pack(anchor="w")
+            tk.Label(skills, text="Total compartilhado entre sessões do RTK.", fg="#9aadc4", bg="#162338").pack(anchor="w")
+        tk.Label(skills, text="Ativação das skills: não verificável.", fg="#9aadc4", bg="#162338").pack(anchor="w")
 
     def refresh():
         nonlocal busy
@@ -115,12 +166,13 @@ def run_gui():
         busy = True
         status.config(text="Atualizando...")
         def worker():
+            totals = rtk_totals()
             try:
                 entries, error = fetch(), None
             except (OSError, ValueError, subprocess.SubprocessError, RuntimeError):
                 entries, error = None, "Não foi possível atualizar. Confira o ai-usagebar."
             try:
-                root.after(0, lambda: display(entries, error))
+                root.after(0, lambda: display(entries, error, totals))
             except RuntimeError:
                 pass
         threading.Thread(target=worker, daemon=True).start()

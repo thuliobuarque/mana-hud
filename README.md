@@ -2,9 +2,18 @@
 
 Uma barra de vida para suas sessões de IA. Acompanhe quotas e recargas de Claude, Codex e Gemini/Antigravity em uma janela para Windows e macOS. Interface pessoal de Thulio Buarque sobre o [ai-usagebar](https://github.com/akitaonrails/ai-usagebar), projeto independente de seus autores.
 
+## Exemplos
+
+As imagens mostram dados simulados, incluindo a economia de exemplo.
+
+![HUD com HP, MP e economia de exemplo](mana-hud-demo.png)
+
+![HUD sugerindo instalação de ferramentas opcionais](mana-hud-instalacao.png)
+
 ## HP, MP e recarga
 
-- **HP, MP e SP** representam as métricas de cada provedor na ordem recebida. A porcentagem é a quota restante, não uma medida de tokens exatos.
+- **HP vermelho** prioriza a sessão; **MP azul** prioriza a janela semanal; SP é roxo. Quando esses rótulos não estão disponíveis, as métricas seguem a ordem informada pelo provedor. A porcentagem é a quota restante, não uma medida de tokens exatos.
+- **Economia de tokens** mostra Caveman e Ponytail encontrados nas pastas de skills e RTK no PATH. Caso algum não seja encontrado, a HUD sugere instalá-lo e continua funcionando. A ativação das skills não é verificável pela HUD. Se o RTK estiver disponível, a HUD mostra o aumento de tokens poupados desde que abriu: o contador do RTK é compartilhado entre sessões e não isola uma conversa.
 - **Reset** mostra o tempo até o horário informado pelo provedor. A quota efetiva depende da próxima resposta do serviço; o HUD não altera limites.
 - **Refresh** consulta o ai-usagebar ao abrir e a cada 3 minutos. O relógio é redesenhado a cada segundo sem nova consulta. Use **Atualizar agora** para consultar imediatamente.
 

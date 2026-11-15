@@ -5,6 +5,10 @@ import mana_hud as hud
 
 
 class HudTests(unittest.TestCase):
+    def test_session_before_weekly(self):
+        metrics = [{"label": "Weekly (7d)"}, {"label": "Codex 5h"}]
+        self.assertEqual(sorted(metrics, key=hud.metric_order)[0]["label"], "Codex 5h")
+
     def test_remaining(self):
         self.assertEqual(hud.remaining(23), 77)
         self.assertEqual(hud.remaining(150), 0)
@@ -19,6 +23,7 @@ class HudTests(unittest.TestCase):
         with patch.object(hud.shutil, "which", return_value=None):
             with self.assertRaises(RuntimeError):
                 hud.fetch()
+            self.assertIsNone(hud.rtk_totals())
 
 
 if __name__ == "__main__":
